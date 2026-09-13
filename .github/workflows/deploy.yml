@@ -20,7 +20,7 @@ jobs:
           username: ${{ secrets.LIGHTSAIL_USER }}
           key: ${{ secrets.LIGHTSAIL_SSH_KEY }}
           envs: GH_TOKEN
-          script_stop: true
+          # Do NOT use script_stop — it breaks if/else (false tests become exit 1)
           script: |
             set -e
             APP_DIR=/var/www/sparkdraw-ai
