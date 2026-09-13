@@ -15,12 +15,14 @@ venv/
 env/
 ENV/
 
-# ML model artifacts
+# ML model artifacts (keep trained upsell model in repo for deploy)
 *.pkl
 *.joblib
 *.h5
 models/*.pkl
 models/*.joblib
+!models/upsell_model_v2.pkl
+!models/feature_names.pkl
 
 # Test / tooling caches
 .pytest_cache/
