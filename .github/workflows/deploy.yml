@@ -46,8 +46,14 @@ jobs:
             sudo git remote set-url origin "https://github.com/${REPO_SLUG}"
 
             if [ ! -d venv ]; then
-              sudo python3 -m venv venv
+              # Prefer 3.11+ when available; Ubuntu 22.04 default is often 3.10
+              if command -v python3.11 >/dev/null 2>&1; then
+                sudo python3.11 -m venv venv
+              else
+                sudo python3 -m venv venv
+              fi
             fi
+            sudo ./venv/bin/python -c "import sys; print('python', sys.version)"
             sudo ./venv/bin/pip install --upgrade pip
             sudo ./venv/bin/pip install -r requirements.txt
 
