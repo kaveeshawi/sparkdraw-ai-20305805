@@ -38,24 +38,30 @@ jobs:
               sudo git clone "$AUTH_REPO" "$APP_DIR"
             fi
 
+            # Avoid "dubious ownership" when repo is owned by www-data/root
+            sudo git config --system --add safe.directory "$APP_DIR" || true
+            git config --global --add safe.directory "$APP_DIR" || true
+            sudo chown -R "$USER:$USER" "$APP_DIR"
+
             cd "$APP_DIR"
-            sudo git remote set-url origin "$AUTH_REPO"
-            sudo git fetch origin main
-            sudo git reset --hard origin/main
+            git remote set-url origin "$AUTH_REPO"
+            git fetch origin main
+            git reset --hard origin/main
             # Do not leave the token in the remote URL on disk
-            sudo git remote set-url origin "https://github.com/${REPO_SLUG}"
+            git remote set-url origin "https://github.com/${REPO_SLUG}"
+            echo "Code at $(git rev-parse --short HEAD)"
 
             if [ ! -d venv ]; then
               # Prefer 3.11+ when available; Ubuntu 22.04 default is often 3.10
               if command -v python3.11 >/dev/null 2>&1; then
-                sudo python3.11 -m venv venv
+                python3.11 -m venv venv
               else
-                sudo python3 -m venv venv
+                python3 -m venv venv
               fi
             fi
-            sudo ./venv/bin/python -c "import sys; print('python', sys.version)"
-            sudo ./venv/bin/pip install --upgrade pip
-            sudo ./venv/bin/pip install -r requirements.txt
+            ./venv/bin/python -c "import sys; print('python', sys.version)"
+            ./venv/bin/pip install --upgrade pip
+            ./venv/bin/pip install -r requirements.txt
 
             if [ ! -f /etc/systemd/system/sparkdraw-ai.service ]; then
               sudo cp deploy/sparkdraw-ai.service /etc/systemd/system/sparkdraw-ai.service
@@ -66,3 +72,4 @@ jobs:
             sudo chown -R www-data:www-data "$APP_DIR"
             sudo systemctl restart sparkdraw-ai
             sudo systemctl --no-pager --full status sparkdraw-ai
+            echo "Deploy finished OK"
