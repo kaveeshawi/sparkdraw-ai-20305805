@@ -2,7 +2,7 @@ import os
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
-from routes import feedback, sentiment, health_score, upsell, estimator, brief, digest
+from routes import feedback, sentiment, health_score, upsell, estimator, brief, digest, invoice_reminder
 
 app = FastAPI(title="Sparkdraw AI Microservice", version="1.0.0")
 
@@ -45,3 +45,4 @@ app.include_router(upsell.router,       prefix="/upsell",           tags=["Upsel
 app.include_router(estimator.router,    prefix="/estimate-hours",   tags=["Estimator"])
 app.include_router(brief.router,        prefix="/brief-generator",  tags=["Brief"])
 app.include_router(digest.router,       prefix="/digest",           tags=["Digest"])
+app.include_router(invoice_reminder.router, prefix="/invoice-reminder", tags=["InvoiceReminder"])

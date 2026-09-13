@@ -45,8 +45,11 @@ def test_high_confidence_returns_upsell_ready(client):
         assert data["tier"] == "high"
         assert data["confidence"] == 0.82
         assert data["model_version"] == "ensemble-v2-calibrated"
-        assert data["service"] == "upsell_recommended"
+        assert data["service"] == "premium_retainer"
         assert len(data["signals"]) >= 1
+        assert len(data["options"]) == 3
+        assert data["options"][0]["service"] == "premium_retainer"
+        assert data["options"][0]["rank"] == 1
     finally:
         mock.stop()
 
@@ -58,6 +61,7 @@ def test_medium_confidence_tier(client):
         data = r.json()["data"]
         assert data["tier"] == "medium"
         assert data["upsell_ready"] is True
+        assert len(data["options"]) >= 2
     finally:
         mock.stop()
 
@@ -69,8 +73,9 @@ def test_low_confidence_not_upsell_ready(client):
         data = r.json()["data"]
         assert data["upsell_ready"] is False
         assert data["tier"] == "low"
-        assert data["service"] is None
+        assert data["service"] == "nurture_followup"
         assert data["reason"] == "timing_not_right"
+        assert len(data["options"]) >= 2
     finally:
         mock.stop()
 
