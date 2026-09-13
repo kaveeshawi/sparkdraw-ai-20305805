@@ -14,8 +14,34 @@ jobs:
           host: ${{ secrets.LIGHTSAIL_HOST }}
           username: ${{ secrets.LIGHTSAIL_USER }}
           key: ${{ secrets.LIGHTSAIL_SSH_KEY }}
+          script_stop: true
           script: |
-            cd /var/www/sparkdraw-ai
-            git pull
-            pip install -r requirements.txt
+            set -e
+            APP_DIR=/var/www/sparkdraw-ai
+            REPO=https://github.com/kaveeshawi/sparkdraw-ai-20305805.git
+
+            sudo mkdir -p /var/www
+            if [ ! -d "$APP_DIR/.git" ]; then
+              sudo rm -rf "$APP_DIR"
+              sudo git clone "$REPO" "$APP_DIR"
+            fi
+
+            cd "$APP_DIR"
+            sudo git fetch origin main
+            sudo git reset --hard origin/main
+
+            if [ ! -d venv ]; then
+              sudo python3 -m venv venv
+            fi
+            sudo ./venv/bin/pip install --upgrade pip
+            sudo ./venv/bin/pip install -r requirements.txt
+
+            if [ ! -f /etc/systemd/system/sparkdraw-ai.service ]; then
+              sudo cp deploy/sparkdraw-ai.service /etc/systemd/system/sparkdraw-ai.service
+              sudo systemctl daemon-reload
+              sudo systemctl enable sparkdraw-ai
+            fi
+
+            sudo chown -R www-data:www-data "$APP_DIR"
             sudo systemctl restart sparkdraw-ai
+            sudo systemctl --no-pager --full status sparkdraw-ai
