@@ -51,22 +51,51 @@ jobs:
             git remote set-url origin "https://github.com/${REPO_SLUG}"
             echo "Code at $(git rev-parse --short HEAD)"
 
-            if [ ! -d venv ]; then
-              # Prefer 3.11+ when available; Ubuntu 22.04 default is often 3.10
+            # upsell_model_v2.pkl needs scikit-learn 1.8 → Python 3.11+
+            ensure_python311() {
               if command -v python3.11 >/dev/null 2>&1; then
-                python3.11 -m venv venv
-              else
-                python3 -m venv venv
+                return 0
+              fi
+              echo "Installing Python 3.11..."
+              sudo apt-get update -y
+              sudo DEBIAN_FRONTEND=noninteractive apt-get install -y python3.11 python3.11-venv python3.11-dev
+            }
+            ensure_python311
+            PY_BIN="$(command -v python3.11)"
+
+            # Recreate venv if missing or wrong Python major.minor
+            NEED_VENV=0
+            if [ ! -d venv ]; then
+              NEED_VENV=1
+            else
+              VENV_PY="$(./venv/bin/python -c 'import sys; print(f"{sys.version_info.major}.{sys.version_info.minor}")' 2>/dev/null || echo 0)"
+              if [ "$VENV_PY" != "3.11" ] && [ "$VENV_PY" != "3.12" ]; then
+                echo "Recreating venv (was Python $VENV_PY, need 3.11+ for sklearn 1.8)"
+                NEED_VENV=1
               fi
             fi
+            if [ "$NEED_VENV" = "1" ]; then
+              rm -rf venv
+              "$PY_BIN" -m venv venv
+            fi
+
             ./venv/bin/python -c "import sys; print('python', sys.version)"
             ./venv/bin/pip install --upgrade pip
             ./venv/bin/pip install -r requirements.txt
+
+            if [ ! -f models/upsell_model_v2.pkl ]; then
+              echo "WARNING: models/upsell_model_v2.pkl missing — upsell will 503"
+            else
+              ls -lh models/upsell_model_v2.pkl models/feature_names.pkl
+            fi
 
             if [ ! -f /etc/systemd/system/sparkdraw-ai.service ]; then
               sudo cp deploy/sparkdraw-ai.service /etc/systemd/system/sparkdraw-ai.service
               sudo systemctl daemon-reload
               sudo systemctl enable sparkdraw-ai
+            else
+              sudo cp deploy/sparkdraw-ai.service /etc/systemd/system/sparkdraw-ai.service
+              sudo systemctl daemon-reload
             fi
 
             sudo chown -R www-data:www-data "$APP_DIR"
