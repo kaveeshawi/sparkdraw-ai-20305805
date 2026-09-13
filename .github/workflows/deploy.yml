@@ -4,31 +4,46 @@ on:
   push:
     branches: [main]
 
+permissions:
+  contents: read
+
 jobs:
   deploy:
     runs-on: ubuntu-latest
     steps:
       - name: Deploy to Lightsail
         uses: appleboy/ssh-action@v1.0.3
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           host: ${{ secrets.LIGHTSAIL_HOST }}
           username: ${{ secrets.LIGHTSAIL_USER }}
           key: ${{ secrets.LIGHTSAIL_SSH_KEY }}
+          envs: GH_TOKEN
           script_stop: true
           script: |
             set -e
             APP_DIR=/var/www/sparkdraw-ai
-            REPO=https://github.com/kaveeshawi/sparkdraw-ai-20305805.git
+            REPO_SLUG=kaveeshawi/sparkdraw-ai-20305805.git
+            AUTH_REPO="https://x-access-token:${GH_TOKEN}@github.com/${REPO_SLUG}"
+
+            if [ -z "$GH_TOKEN" ]; then
+              echo "GH_TOKEN is empty — cannot clone private repo"
+              exit 1
+            fi
 
             sudo mkdir -p /var/www
             if [ ! -d "$APP_DIR/.git" ]; then
               sudo rm -rf "$APP_DIR"
-              sudo git clone "$REPO" "$APP_DIR"
+              sudo git clone "$AUTH_REPO" "$APP_DIR"
             fi
 
             cd "$APP_DIR"
+            sudo git remote set-url origin "$AUTH_REPO"
             sudo git fetch origin main
             sudo git reset --hard origin/main
+            # Do not leave the token in the remote URL on disk
+            sudo git remote set-url origin "https://github.com/${REPO_SLUG}"
 
             if [ ! -d venv ]; then
               sudo python3 -m venv venv
